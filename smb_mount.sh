@@ -1,5 +1,5 @@
 smb_mount() {
-  if [ -f ~/.smbrc ]; then
+  if [[ -f ~/.smbrc ]]; then
     . ~/.smbrc
   fi
   local smb_host=$1
@@ -9,7 +9,7 @@ smb_mount() {
   local result exit_code
 
 
-  if [ -z $smb_host ] || [ -z $smb_share ]; then
+  if [[ -z $smb_host || -z $smb_share ]]; then
     cat <<-USAGE
 smb_mount {host} {share_name} {mount_point}
 
@@ -29,27 +29,33 @@ NOTE: no spaces between the equal sign.
 USAGE
     return 1;
   fi
-  if [ -z $smb_mount_point ]; then
+
+  if [[ -z $smb_mount_point ]]; then
     smb_mount_point=/Volumes/$smb_share
   fi
-  if ! mount | grep " $smb_mount_point " >/dev/null; then
-    mkdir -p $smb_mount_point
-    echo mount -t smbfs //${smb_host_uri}/$smb_share $smb_mount_point
-    result=$(mount -t smbfs //${smb_host_uri}/$smb_share $smb_mount_point 2>&1)
-    exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-      re='server connection failed: Socket is not connected'
-      if [[ $result =~ $re ]]; then
-        echo "'mount -t smbfs' failed, falling back to mount_smbfs"
-        result=$(mount_smbfs -s //${smb_host_uri}/$smb_share $smb_mount_point 2>&1)
-        exit_code=$?
-        if [ $exit_code -ne 0 ]; then
-          echo "mount failed (exit_code: $exit_code): $result"
-          return 1
-        fi
-      fi
-    fi
-  else
+
+  if mount |
+     grep " $smb_mount_point " >/dev/null
+  then
     echo "$smb_mount_point already mounted."
+    return
   fi
+
+  mkdir -p "$smb_mount_point"
+  echo "mount -t smbfs //${smb_host_uri}/$smb_share $smb_mount_point"
+  result=$( mount -t smbfs "//${smb_host_uri}/$smb_share" "$smb_mount_point" 2>&1 ) &&
+    return
+
+  exit_code=$?
+  re='server connection failed: Socket is not connected'
+  [[ $result = *$re* ]] ||
+    return
+
+  echo "'mount -t smbfs' failed, falling back to mount_smbfs"
+  result=$( mount_smbfs -s "//${smb_host_uri}/$smb_share" "$smb_mount_point" 2>&1 ) &&
+    return
+
+  exit_code=$?
+  echo "mount failed (exit_code: $exit_code): $result"
+  return 1
 }
