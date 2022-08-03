@@ -1,2 +1,3 @@
 #!/bin/bash
-cd ~/.vim/bundle/YouCompleteMe; ./install.sh
+cd ~/.vim/bundle/YouCompleteMe &&
+./install.sh
