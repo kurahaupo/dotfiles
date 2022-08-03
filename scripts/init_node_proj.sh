@@ -1,5 +1,7 @@
 #!/bin/bash
-app_name=${1:-$(basename $PWD)}
+
+app_name=${1:-${PWD##*/}}
+
 cat <<PACKAGE > package.json
 {
   "name": "$app_name",
@@ -13,7 +15,9 @@ cat <<PACKAGE > package.json
   }
 }
 PACKAGE
-[ -f main.js ] || touch main.js
+
+: >> main.js
+
 CAT <<JSCRC > .jscrc
 {
   "preset": "crockford",
